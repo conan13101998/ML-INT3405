@@ -9,9 +9,12 @@
     "@tensorflow/tfjs-node-gpu": "^2.0.1",
     "cookie-parser": "~1.4.4",
     "debug": "~2.6.9",
+    "dotenv": "^8.2.0",
     "ejs": "~2.6.1",
     "express": "~4.16.1",
+    "http": "0.0.1-security",
     "http-errors": "~1.6.3",
+    "https": "^1.0.0",
     "materialize-css": "^1.0.0-rc.2",
     "morgan": "~1.9.1",
     "nodemon": "^2.0.4"
