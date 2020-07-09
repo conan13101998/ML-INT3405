@@ -1,7 +1,6 @@
 import face_recognition
 import cv2
 import numpy as np
-import insightface
 import tensorflow as tf
 from keras import backend as K
 from keras.models import Model, Sequential
@@ -13,14 +12,9 @@ import os
 import mysql.connector
 from mysql.connector import errorcode
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-num_cores = 4
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-config = tf.ConfigProto(intra_op_parallelism_threads=num_cores, inter_op_parallelism_threads=num_cores,
-                        allow_soft_placement=True,
-                        device_count={'CPU': 1, 'GPU': 0})
-session = tf.Session(config=config)
-K.set_session(session)
+config = tf.ConfigProto()
+config.gpu_options.allow_growth = True
+sess = tf.Session(config=config)
 if tf.test.gpu_device_name():
     print('GPU found')
 else:
@@ -144,32 +138,12 @@ def genderModel():
     return gender_model
 
 
-def init_gender_age_model():
-    model = insightface.app.FaceAnalysis()
-    ctx_id = '-1'
-    model.prepare(ctx_id=int(ctx_id), nms=0.4)
-    return model
-
-
-def predict_age_gender(age_gender_model, frame):
-    faces = age_gender_model.get(rgb_small_frame)
-    for idx, face in enumerate(faces):
-        print("Face [%d]:" % idx)
-        print("\tage:%d" % (face.age))
-        gender = 'Male'
-        if face.gender == 0:
-            gender = 'Female'
-        print("\tgender:%s" % (gender))
-        print("\tembedding shape:%s" % face.embedding.shape)
-        print("")
-
-
 if __name__ == '__main__':
     video_capture = cv2.VideoCapture(0)
 
     known_face_encodings = []
     known_face_names = []
-    similar_threshold = 0.4
+    similar_threshold = 0.5
     age_model = ageModel()
     gender_model = genderModel()
     output_indexes = np.array([i for i in range(0, 101)])
@@ -196,26 +170,30 @@ if __name__ == '__main__':
 
             face_names = []
 
-            for face_encoding in face_encodings:
-                matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
-                # # If a match was found in known_face_encodings, just use the first one.
-                if True in matches:
-                    first_match_index = matches.index(True)
-                    name = known_face_names[first_match_index]
-                else:
-                    face_distances = face_recognition.face_distance(known_face_encodings, face_encoding)
-                    print(face_distances)
-                    if len(face_distances) == 0 or face_distances > similar_threshold:
+            try:
+                for face_encoding in face_encodings:
+                    if len(known_face_encodings) == 0:
                         print(f'Add new face with encoding: \n{face_encoding}')
                         known_face_encodings.append(face_encoding)
                         name = 'Name ' + str(cnt)
                         known_face_names.append(name)
                         cnt += 1
                     else:
-                        best_match_index = np.argmin(face_distances)
-                        name = known_face_names[best_match_index]
+                        face_distances = face_recognition.face_distance(known_face_encodings, face_encoding)
+                        # print(face_distances)
+                        if face_distances[np.argmin(face_distances)] > similar_threshold:
+                            print(f'Add new face with encoding: \n{face_encoding}')
+                            known_face_encodings.append(face_encoding)
+                            name = 'Name ' + str(cnt)
+                            known_face_names.append(name)
+                            cnt += 1
+                        else:
+                            best_match_index = np.argmin(face_distances)
+                            name = known_face_names[best_match_index]
 
-                face_names.append(name)
+                    face_names.append(name)
+            except:
+                pass
 
         process_this_frame = not process_this_frame
 
@@ -229,12 +207,14 @@ if __name__ == '__main__':
 
             try:
                 margin = 40
-                margin_x = int((w * margin) / 100);
+                margin_x = int((w * margin) / 100)
                 margin_y = int((h * margin) / 100)
-                detected_face = frame[int(top - margin_y):int(top + h + margin_y),
-                                int(left - margin_x):int(left + w + margin_x)]
+                detected_face = frame[int(top - margin_y):int(top + h + margin_y), int(left - margin_x):int(left + w + margin_x)]
             except:
                 print("detected face has no margin")
+
+            gender = "M"
+            apparent_age = 25
 
             try:
                 # vgg-face expects inputs (224, 224, 3)
@@ -253,17 +233,16 @@ if __name__ == '__main__':
 
                 if gender_index == 0:
                     gender = "F"
-                else:
-                    gender = "M"
 
             except Exception as e:
-                print("exception", str(e))
+                # print("exception", str(e))
+                pass
 
             cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
 
             # cv2.rectangle(frame, (left, bottom - 35), (right, bottom), (0, 0, 255), cv2.FILLED)
             font = cv2.FONT_HERSHEY_DUPLEX
-            info = name + ', ' + gender + ', ' + apparent_age
+            info = name + ', ' + gender + ', ' + str(apparent_age)
             cv2.putText(frame, info, (left + 6, bottom - 6), font, 1.0, (255, 255, 255), 1)
 
         cv2.imshow('Video', frame)
