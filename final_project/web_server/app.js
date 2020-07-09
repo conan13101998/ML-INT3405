@@ -3,14 +3,19 @@ let express = require('express');
 let path = require('path');
 let cookieParser = require('cookie-parser');
 let logger = require('morgan');
+const http = require('http');
+const https = require('https');
+const fs = require('fs');
 
 let indexRouter = require('./routes/index');
 let usersRouter = require('./routes/users');
 
 let app = express();
 
+require('dotenv').config();
+
 // view engine setup
-const port = 3000
+const port = 3001
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 
@@ -39,5 +44,22 @@ app.use(function(err, req, res, next) {
     res.render('error');
 });
 
-app.listen(port)
-module.exports = app;
+if(process.env.NODE_ENV === 'production'){
+    /**
+     * point to SSL Cert
+     */
+    const ssl_key = fs.readFileSync('/etc/letsencrypt/live/sv-procon.uet.vnu.edu.vn/privkey.pem');
+    const ssl_cert = fs.readFileSync('/etc/letsencrypt/live/sv-procon.uet.vnu.edu.vn/cert.pem');
+    const ca = fs.readFileSync('/etc/letsencrypt/live/sv-procon.uet.vnu.edu.vn/chain.pem');
+
+    let httpsSer = {
+        key: ssl_key,
+        cert: ssl_cert,
+        ca: ca
+    };
+
+    https.createServer(httpsSer, app).listen(port);
+}
+else if(process.env.NODE_ENV === 'development'){
+    http.createServer(app).listen(port);
+}
