@@ -15,7 +15,6 @@ let app = express();
 require('dotenv').config();
 
 // view engine setup
-const port = 3001
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 
@@ -58,8 +57,8 @@ if(process.env.NODE_ENV === 'production'){
         ca: ca
     };
 
-    https.createServer(httpsSer, app).listen(port);
+    https.createServer(httpsSer, app).listen('3003');
 }
 else if(process.env.NODE_ENV === 'development'){
-    http.createServer(app).listen(port);
+    http.createServer(app).listen('3000');
 }
