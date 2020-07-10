@@ -7,6 +7,7 @@
   },
   "dependencies": {
     "@tensorflow/tfjs-node-gpu": "^2.0.1",
+    "body-parser": "^1.19.0",
     "cookie-parser": "~1.4.4",
     "debug": "~2.6.9",
     "dotenv": "^8.2.0",
@@ -17,6 +18,7 @@
     "https": "^1.0.0",
     "materialize-css": "^1.0.0-rc.2",
     "morgan": "~1.9.1",
+    "mysql": "^2.18.1",
     "nodemon": "^2.0.4"
   }
 }

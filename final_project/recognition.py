@@ -2,11 +2,8 @@ import face_recognition
 import cv2
 import numpy as np
 import tensorflow as tf
-from keras import backend as K
 from keras.models import Model, Sequential
 from keras.layers import Input, Convolution2D, ZeroPadding2D, MaxPooling2D, Flatten, Dense, Dropout, Activation
-from keras.preprocessing.image import load_img, save_img, img_to_array
-from keras.applications.imagenet_utils import preprocess_input
 from keras.preprocessing import image
 import os
 import pymysql
@@ -129,10 +126,13 @@ def get_embedded_face():
     user_list = mycursor.fetchall()
     known_face_encodings = []
     known_face_names = []
-    for row in user_list:
-        usr_name = 'Name ' + str(row["user_id"])
-        known_face_names.append(usr_name)
-        known_face_encodings.append(np.frombuffer(row["face_embedding"]))
+    try:
+        for row in user_list:
+            usr_name = 'Name ' + str(row["user_id"])
+            known_face_names.append(usr_name)
+            known_face_encodings.append(np.frombuffer(row["face_embedding"]))
+    except:
+        pass
     mycursor.close()
     return known_face_encodings, known_face_names
 

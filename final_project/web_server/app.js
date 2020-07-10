@@ -8,7 +8,6 @@ const https = require('https');
 const fs = require('fs');
 
 let indexRouter = require('./routes/index');
-let usersRouter = require('./routes/users');
 
 let app = express();
 
@@ -26,7 +25,6 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
-app.use('/users', usersRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
@@ -44,22 +42,24 @@ app.use(function(err, req, res, next) {
     res.render('error');
 });
 
-if(process.env.NODE_ENV === 'production'){
-    /**
-     * point to SSL Cert
-     */
-    const ssl_key = fs.readFileSync('/etc/letsencrypt/live/sv-procon.uet.vnu.edu.vn/privkey.pem');
-    const ssl_cert = fs.readFileSync('/etc/letsencrypt/live/sv-procon.uet.vnu.edu.vn/cert.pem');
-    const ca = fs.readFileSync('/etc/letsencrypt/live/sv-procon.uet.vnu.edu.vn/chain.pem');
+// if(process.env.NODE_ENV === 'production'){
+//     /**
+//      * point to SSL Cert
+//      */
+//     const ssl_key = fs.readFileSync('/etc/letsencrypt/live/sv-procon.uet.vnu.edu.vn/privkey.pem');
+//     const ssl_cert = fs.readFileSync('/etc/letsencrypt/live/sv-procon.uet.vnu.edu.vn/cert.pem');
+//     const ca = fs.readFileSync('/etc/letsencrypt/live/sv-procon.uet.vnu.edu.vn/chain.pem');
+//
+//     let httpsSer = {
+//         key: ssl_key,
+//         cert: ssl_cert,
+//         ca: ca
+//     };
+//
+//     https.createServer(httpsSer, app).listen('3003');
+// }
+// else if(process.env.NODE_ENV === 'development'){
+//     http.createServer(app).listen('3000');
+// }
 
-    let httpsSer = {
-        key: ssl_key,
-        cert: ssl_cert,
-        ca: ca
-    };
-
-    https.createServer(httpsSer, app).listen('3003');
-}
-else if(process.env.NODE_ENV === 'development'){
-    http.createServer(app).listen('3000');
-}
+http.createServer(app).listen(3000);
