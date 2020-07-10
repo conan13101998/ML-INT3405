@@ -9,8 +9,7 @@ from keras.preprocessing.image import load_img, save_img, img_to_array
 from keras.applications.imagenet_utils import preprocess_input
 from keras.preprocessing import image
 import os
-import mysql.connector
-from mysql.connector import errorcode
+import pymysql
 
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
@@ -20,43 +19,47 @@ if tf.test.gpu_device_name():
 else:
     print("No GPU found")
 
-enableGenderIcons = True
-
-male_icon = cv2.imread("male.jpg")
-male_icon = cv2.resize(male_icon, (40, 40))
-
-female_icon = cv2.imread("female.jpg")
-female_icon = cv2.resize(female_icon, (40, 40))
-
 
 def init_database():
     try:
-        cnx = mysql.connector.connect(user='root', password='iotlab2018',
-                                      host='sv-procon.uet.vnu.edu.vn',
-                                      database='gender_age_prediction')
+        # cnx = mysql.connector.connect(user='root', password='iotlab2018',
+        #                               host='sv-procon.uet.vnu.edu.vn',
+        #                               database='age_gender_prediction')
+        cnx = pymysql.connect(user='root', password='23081998',
+                              host='127.0.0.1',
+                              db='age_gender_prediction',
+                              cursorclass=pymysql.cursors.DictCursor)
+
         return cnx
-    except mysql.connector.Error as err:
-        if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
-            print("Something is wrong with your user name or password")
-        elif err.errno == errorcode.ER_BAD_DB_ERROR:
-            print("Database does not exist")
-        else:
-            print(err)
+    except Exception as e:
+        print("exception", str(e))
+        return
 
 
-def get_embedded_face(mycursor):
+def get_embedded_face():
+    mycursor = conn.cursor()
     query = 'SELECT * FROM User_info'
     mycursor.execute(query)
     user_list = mycursor.fetchall()
-    return user_list
+    known_face_encodings = []
+    known_face_names = []
+    for row in user_list:
+        usr_name = 'Name ' + str(row["user_id"])
+        known_face_names.append(usr_name)
+        known_face_encodings.append(np.frombuffer(row["face_embedding"]))
+    mycursor.close()
+    return known_face_encodings, known_face_names
 
 
-def preprocess_image(image_path):
-    img = load_img(image_path, target_size=(224, 224))
-    img = img_to_array(img)
-    img = np.expand_dims(img, axis=0)
-    img = preprocess_input(img)
-    return img
+def insert_user(face_embedding, age, gender):
+    mycursor = conn.cursor()
+    query = "INSERT INTO User_info (face_embedding, age, gender) VALUES (%s, %s, %s)"
+    val = (face_embedding, age, gender)
+    affected_cnt = mycursor.execute(query, val)
+    conn.commit()
+    mycursor.close()
+    print(f"Inserted {affected_cnt}")
+    return mycursor.lastrowid
 
 
 def loadVggFaceModel():
@@ -138,11 +141,12 @@ def genderModel():
     return gender_model
 
 
+conn = init_database()
+
 if __name__ == '__main__':
     video_capture = cv2.VideoCapture(0)
 
-    known_face_encodings = []
-    known_face_names = []
+    known_face_encodings, known_face_names = get_embedded_face()
     similar_threshold = 0.5
     age_model = ageModel()
     gender_model = genderModel()
@@ -153,8 +157,6 @@ if __name__ == '__main__':
     face_names = []
     process_this_frame = True
 
-    mydb = init_database()
-    mycursor = mydb.cursor()
     cnt = 0
 
     while True:
@@ -175,7 +177,7 @@ if __name__ == '__main__':
                     if len(known_face_encodings) == 0:
                         print(f'Add new face with encoding: \n{face_encoding}')
                         known_face_encodings.append(face_encoding)
-                        name = 'Name ' + str(cnt)
+                        name = 'New ' + str(cnt)
                         known_face_names.append(name)
                         cnt += 1
                     else:
@@ -184,7 +186,7 @@ if __name__ == '__main__':
                         if face_distances[np.argmin(face_distances)] > similar_threshold:
                             print(f'Add new face with encoding: \n{face_encoding}')
                             known_face_encodings.append(face_encoding)
-                            name = 'Name ' + str(cnt)
+                            name = 'New ' + str(cnt)
                             known_face_names.append(name)
                             cnt += 1
                         else:
@@ -197,24 +199,24 @@ if __name__ == '__main__':
 
         process_this_frame = not process_this_frame
 
-        for (top, right, bottom, left), name in zip(face_locations, face_names):
+        for face_encoding, (top, right, bottom, left), name in zip(face_encodings, face_locations, face_names):
             top *= 4
             right *= 4
             bottom *= 4
             left *= 4
             w = abs(right - left)
             h = abs(top - bottom)
+            gender = "M"
+            apparent_age = 25
 
             try:
                 margin = 40
                 margin_x = int((w * margin) / 100)
                 margin_y = int((h * margin) / 100)
-                detected_face = frame[int(top - margin_y):int(top + h + margin_y), int(left - margin_x):int(left + w + margin_x)]
+                detected_face = frame[int(top - margin_y):int(top + h + margin_y),
+                                int(left - margin_x):int(left + w + margin_x)]
             except:
-                print("detected face has no margin")
-
-            gender = "M"
-            apparent_age = 25
+                print("Detected face has no margin")
 
             try:
                 # vgg-face expects inputs (224, 224, 3)
@@ -234,6 +236,13 @@ if __name__ == '__main__':
                 if gender_index == 0:
                     gender = "F"
 
+                tmp = name.split()[0]
+                idx = name.split()[1]
+                if tmp == "New":
+                    str_face_encoding = face_encoding.tostring()
+                    name_idx = insert_user(str_face_encoding, int(apparent_age), int(gender_index))
+                    known_face_names[known_face_names.index(name)] = 'Name ' + str(name_idx)
+                    print("Changed name: ", name_idx)
             except Exception as e:
                 # print("exception", str(e))
                 pass
@@ -242,8 +251,8 @@ if __name__ == '__main__':
 
             # cv2.rectangle(frame, (left, bottom - 35), (right, bottom), (0, 0, 255), cv2.FILLED)
             font = cv2.FONT_HERSHEY_DUPLEX
-            info = name + ', ' + gender + ', ' + str(apparent_age)
-            cv2.putText(frame, info, (left + 6, bottom - 6), font, 1.0, (255, 255, 255), 1)
+            info = str(name) + ', ' + str(gender) + ', ' + str(apparent_age)
+            cv2.putText(frame, info, (left + 6, bottom - 6), font, 0.5, (255, 255, 255), 1)
 
         cv2.imshow('Video', frame)
 
