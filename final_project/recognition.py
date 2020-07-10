@@ -10,6 +10,8 @@ from keras.applications.imagenet_utils import preprocess_input
 from keras.preprocessing import image
 import os
 import pymysql
+import time
+import datetime
 
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
@@ -18,48 +20,6 @@ if tf.test.gpu_device_name():
     print('GPU found')
 else:
     print("No GPU found")
-
-
-def init_database():
-    try:
-        # cnx = mysql.connector.connect(user='root', password='iotlab2018',
-        #                               host='sv-procon.uet.vnu.edu.vn',
-        #                               database='age_gender_prediction')
-        cnx = pymysql.connect(user='root', password='23081998',
-                              host='127.0.0.1',
-                              db='age_gender_prediction',
-                              cursorclass=pymysql.cursors.DictCursor)
-
-        return cnx
-    except Exception as e:
-        print("exception", str(e))
-        return
-
-
-def get_embedded_face():
-    mycursor = conn.cursor()
-    query = 'SELECT * FROM User_info'
-    mycursor.execute(query)
-    user_list = mycursor.fetchall()
-    known_face_encodings = []
-    known_face_names = []
-    for row in user_list:
-        usr_name = 'Name ' + str(row["user_id"])
-        known_face_names.append(usr_name)
-        known_face_encodings.append(np.frombuffer(row["face_embedding"]))
-    mycursor.close()
-    return known_face_encodings, known_face_names
-
-
-def insert_user(face_embedding, age, gender):
-    mycursor = conn.cursor()
-    query = "INSERT INTO User_info (face_embedding, age, gender) VALUES (%s, %s, %s)"
-    val = (face_embedding, age, gender)
-    affected_cnt = mycursor.execute(query, val)
-    conn.commit()
-    mycursor.close()
-    print(f"Inserted {affected_cnt}")
-    return mycursor.lastrowid
 
 
 def loadVggFaceModel():
@@ -141,6 +101,72 @@ def genderModel():
     return gender_model
 
 
+def init_database():
+    try:
+        # cnx = mysql.connector.connect(user='root', password='iotlab2018',
+        #                               host='sv-procon.uet.vnu.edu.vn',
+        #                               database='age_gender_prediction')
+        # cnx = pymysql.connect(user='root', password='23081998',
+        #                       host='127.0.0.1',
+        #                       db='age_gender_prediction',
+        #                       charset='utf8',
+        #                       cursorclass=pymysql.cursors.DictCursor)
+        cnx = pymysql.connect(user='root', password='iotlab2018',
+                              host='sv-procon.uet.vnu.edu.vn',
+                              db='age_gender_prediction',
+                              charset='utf8',
+                              cursorclass=pymysql.cursors.DictCursor)
+        return cnx
+    except Exception as e:
+        print("exception", str(e))
+        return
+
+
+def get_embedded_face():
+    mycursor = conn.cursor()
+    query = 'SELECT * FROM User_info'
+    mycursor.execute(query)
+    user_list = mycursor.fetchall()
+    known_face_encodings = []
+    known_face_names = []
+    for row in user_list:
+        usr_name = 'Name ' + str(row["user_id"])
+        known_face_names.append(usr_name)
+        known_face_encodings.append(np.frombuffer(row["face_embedding"]))
+    mycursor.close()
+    return known_face_encodings, known_face_names
+
+
+def insert_user(face_embedding, age, gender):
+    mycursor = conn.cursor()
+    query = "INSERT INTO User_info (face_embedding, age, gender) VALUES (%s, %s, %s)"
+    val = (face_embedding, age, gender)
+    affected_cnt = mycursor.execute(query, val)
+    conn.commit()
+    mycursor.close()
+    print(f"Inserted {affected_cnt}")
+    return mycursor.lastrowid
+
+
+def check_last_time_appear(user_id):
+    mycusor = conn.cursor()
+    query = "SELECT time FROM History WHERE user_id = %s ORDER BY time DESC"
+    mycusor.execute(query, user_id)
+    row = mycusor.fetchone()
+    if row is not None:
+        row = row["time"]
+    mycusor.close()
+    return row
+
+
+def insert_history(user_id):
+    mycusor = conn.cursor()
+    query = "INSERT INTO History (user_id) VALUES (%s)"
+    mycusor.execute(query, user_id)
+    conn.commit()
+    mycusor.close()
+    print("Insert History successful")
+
 conn = init_database()
 
 if __name__ == '__main__':
@@ -192,9 +218,23 @@ if __name__ == '__main__':
                         else:
                             best_match_index = np.argmin(face_distances)
                             name = known_face_names[best_match_index]
+                            user_id = name.split()[1]
+                            print("User ID: ", user_id)
+                            last_time = check_last_time_appear(user_id)
+                            if last_time is None:
+                                insert_history(user_id)
+                            else:
+                                now = datetime.datetime.now()
+                                diff = now - last_time
+                                diff_hours = diff.seconds//3600
+                                if diff_hours >= 1:
+                                    insert_history(user_id)
+                                else:
+                                    print("Still here")
 
                     face_names.append(name)
-            except:
+            except Exception as e:
+                # print("exception", str(e))
                 pass
 
         process_this_frame = not process_this_frame
