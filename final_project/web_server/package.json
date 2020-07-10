@@ -6,6 +6,9 @@
     "start": "node ./bin/www"
   },
   "dependencies": {
+    "@amcharts/amcharts4": "^4.9.30",
+    "@amcharts/amcharts4-fonts": "^4.0.1",
+    "@amcharts/amcharts4-geodata": "^4.1.16",
     "@tensorflow/tfjs-node-gpu": "^2.0.1",
     "body-parser": "^1.19.0",
     "cookie-parser": "~1.4.4",
