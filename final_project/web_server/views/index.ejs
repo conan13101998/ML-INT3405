@@ -32,13 +32,20 @@
         <div class="title orange-text" style="font-size: xx-large">CHART OF CUSTOMER CLASSIFICATION BY AGE</div>
         <div id="ageChart" style="width: 100%; height: 600px;"></div>
     </div>
-    <div id="genderChartContainer" class="center-align hide" style="font-weight: bold">
-        <div class="title orange-text" style="font-size: xx-large">CHART OF CUSTOMER CLASSIFICATION BY AGE</div>
+    <div id="genderChartContainer" class="center-align" style="font-weight: bold">
+        <div class="title orange-text" style="font-size: xx-large">CHART OF CUSTOMER CLASSIFICATION BY GENDER</div>
         <div id="genderChart"  style="width: 100%; height: 600px;"></div>
     </div>
-    <div id="dayChartContainer" class="center-align hide" style="font-weight: bold">
-        <div class="title orange-text" style="font-size: xx-large">CHART OF CUSTOMER CLASSIFICATION BY AGE</div>
-        <div id="dayChart" style="width: 100%; height: 600px;"></div>
+    <div id="dayChartContainer" class="center-align" style="font-weight: bold">
+        <div class="title orange-text" style="font-size: xx-large">DAY CHART</div>
+        <div class="container center-align" style="padding-left: 10%; padding-right: 10%">
+            <input id="startDatePicker" type="text" class="datepicker-modal" placeholder="Start Date">
+            <input id="endDatePicker" type="text" class="datepicker-modal" placeholder="End Date">
+        </div>
+        <button class="deep-orange lighten-1waves-effect waves-light btn-large" id="getDayDataBtn">GET DATA</button>
+        <div id="totalCustomer"></div>
+        <div id="dayChartAge" style="width: 100%; height: 600px;"></div>
+        <div id="dayChartGender" style="width: 100%; height: 600px;"></div>
     </div>
 </div>
 
