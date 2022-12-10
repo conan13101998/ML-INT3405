@@ -15,7 +15,7 @@
     "debug": "~2.6.9",
     "dotenv": "^8.2.0",
     "ejs": "~2.6.1",
-    "express": "~4.16.1",
+    "express": "~4.17.3",
     "http": "0.0.1-security",
     "http-errors": "~1.6.3",
     "https": "^1.0.0",
